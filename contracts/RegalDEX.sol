@@ -10,250 +10,72 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./lib/Strings.sol";
+import "./lib/ProxyRegistry.sol";
 
 
-contract OwnableDelegateProxy { }
 
 
-
-contract ProxyRegistry {
-  mapping(address => OwnableDelegateProxy) public proxies;
-}
-
-
-contract RegalDEX is Initializable, ERC1155Upgradeable,  OwnableUpgradeable, AccessControlEnumerableUpgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable {
+contract RegalDEX is UUPSUpgradeable, ERC1155Upgradeable,  OwnableUpgradeable, AccessControlEnumerableUpgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable {
 
 
 using Strings for string;
 using SafeMathUpgradeable for uint256;
 
- // URI's default URI prefix
-  string internal baseMetadataURI;
+ERC20Upgradeable public exchangeToken;
+
 
 
 address proxyRegistryAddress;
-uint256 private _currentTokenID = 0;
-mapping (uint256 => address) public creators;
-mapping (uint256 => uint256) public tokenSupply;
+address tokenFactoryAddress;
+address erc721TokensRegistry;
 
+ProxyRegistry public registry;
 
-// Mapping from token ID to account balances
-mapping(address => mapping(uint256 => uint256)) private _balances;
-string public name;
-string public symbol;
+  /* Cancelled / finalized orders, by hash. */
+    mapping(bytes32 => bool) public cancelledOrFinalized;
 
+    /* Orders verified by on-chain approval (alternative to ECDSA signatures so that smart contracts can place orders directly). */
+    mapping(bytes32 => bool) public approvedOrders;
 
+      /* For split fee orders, minimum required protocol maker fee, in basis points. Paid to owner (who can change it). */
+    uint public minimumMakerProtocolFee = 0;
 
+    /* For split fee orders, minimum required protocol taker fee, in basis points. Paid to owner (who can change it). */
+    uint public minimumTakerProtocolFee = 0;
 
-  /**
-   * @dev Require msg.sender to be the creator of the token id
-   */
-  modifier creatorOnly(uint256 _id) {
-    require(creators[_id] == msg.sender, "RegalDEX#creatorOnly: ONLY_CREATOR_ALLOWED");
-    _;
-  }
+    address public protocolFeeRecipient;
 
-  /**
-   * @dev Require msg.sender to own more than 0 of the token id
-   */
-  modifier ownersOnly(uint256 _id) {
-    require(_balances[msg.sender][_id] > 0, "RegalDEX#ownersOnly: ONLY_OWNERS_ALLOWED");
-    _;
-  }
+    enum FeeMethod { 
+      ProtocolFee, SplitFee }
+
+/* Inverse basis point. */
+    uint public constant INVERSE_BASIS_POINT = 10000;
 
 
 
+struct Order {
 
-RegalERC20 private token;
-
-event Bought(uint256 amount, string _token);
-event Sold(uint256 amount, string _token);
-
-address tok;
-
-
-function initialize(string memory _name,
-string memory _symbol,
-address _proxyRegistryAddress) public virtual initializer {
-  
-name = _name;
-symbol = _symbol;
-proxyRegistryAddress = _proxyRegistryAddress;
-
-}
-
-  /**
-    * @dev Returns whether the specified token exists by checking to see if it has a creator
-    * @param _id uint256 ID of the token to query the existence of
-    * @return bool whether the token exists
-    */
-  function _exists(
-    uint256 _id
-  ) internal view returns (bool) {
-    return creators[_id] != address(0);
-  }
+  address exchange;
+  address maker;
+  address taker;
+  uint makerRelayerFee;
+        /* Taker relayer fee of the order, or maximum taker fee for a taker order. */
+        uint takerRelayerFee;
+        /* Maker protocol fee of the order, unused for taker order. */
+        uint makerProtocolFee;
+        /* Taker protocol fee of the order, or maximum taker fee for a taker order. */
+        uint takerProtocolFee;
+        /* Order fee recipient or zero address for taker order. */
+        address feeRecipient;
+        /* Fee method (protocol token or split fee). */
+        FeeMethod feeMethod;
+        address target;
 
 
-function uri(
-    uint256 _id
-  ) public view override returns (string memory) {
-    require(_exists(_id), "RegalDEX#uri: NONEXISTENT_TOKEN");
-      return Strings.strConcat(
-      baseMetadataURI,
-      Strings.uint2str(_id)
-    );
-  }
-
-function totalSupply(
-  uint256 _id
-) public view returns (uint256) {
-  return tokenSupply[_id];
-}
-
-
-  /**
-   * @dev Will update the base URL of token's URI
-   * @param _newBaseMetadataURI New base URL of token's URI
-   */
-  function setBaseMetadataURI(
-    string memory _newBaseMetadataURI
-  ) public onlyOwner {
-    _setBaseMetadataURI(_newBaseMetadataURI);
-  }
-
-  /**
-   * @notice Will update the base URL of token's URI
-   * @param _newBaseMetadataURI New base URL of token's URI
-   */
-  function _setBaseMetadataURI(string memory _newBaseMetadataURI) internal {
-    baseMetadataURI = _newBaseMetadataURI;
-  }
-
-
-function create(
-  address _initialOwner,
-  uint256 _initialSupply,
-  string calldata _uri,
-  bytes calldata _data
-) external returns(uint256) {
-
-   uint256 _id = _getNextTokenID();
-    _incrementTokenTypeId();
-    creators[_id] = msg.sender;
-
-    if (bytes(_uri).length > 0) {
-      emit URI(_uri, _id);
-    }
-
-    _mint(_initialOwner, _id, _initialSupply, _data);
-    tokenSupply[_id] = _initialSupply;
-    return _id;
 
 }
-
- /**
-    * @dev Mints some amount of tokens to an address
-    * @param _to          Address of the future owner of the token
-    * @param _id          Token ID to mint
-    * @param _quantity    Amount of tokens to mint
-    * @param _data        Data to pass if receiver is contract
-    */
-  function mint(
-    address _to,
-    uint256 _id,
-    uint256 _quantity,
-    bytes memory _data
-  ) public creatorOnly(_id) {
-    _mint(_to, _id, _quantity, _data);
-    tokenSupply[_id] = tokenSupply[_id].add(_quantity);
-  }
-
-  /**
-    * @dev Mint tokens for each id in _ids
-    * @param _to          The address to mint tokens to
-    * @param _ids         Array of ids to mint
-    * @param _quantities  Array of amounts of tokens to mint per id
-    * @param _data        Data to pass if receiver is contract
-    */
-  function batchMint(
-    address _to,
-    uint256[] memory _ids,
-    uint256[] memory _quantities,
-    bytes memory _data
-  ) public {
-    for (uint256 i = 0; i < _ids.length; i++) {
-      uint256 _id = _ids[i];
-      require(creators[_id] == msg.sender, "RegalDEX#batchMint: ONLY_CREATOR_ALLOWED");
-      uint256 quantity = _quantities[i];
-      tokenSupply[_id] = tokenSupply[_id].add(quantity);
-    }
-    _mintBatch(_to, _ids, _quantities, _data);
-  }
-
-
-   /**
-    * @dev Change the creator address for given tokens
-    * @param _to   Address of the new creator
-    * @param _ids  Array of Token IDs to change creator
-    */
-  function setCreator(
-    address _to,
-    uint256[] memory _ids
-  ) public {
-    require(_to != address(0), "RegalDEX#setCreator: INVALID_ADDRESS.");
-    for (uint256 i = 0; i < _ids.length; i++) {
-      uint256 id = _ids[i];
-      _setCreator(_to, id);
-    }
-  }
-
-
-  /**
-   * Override isApprovedForAll to whitelist user's proxy accounts to enable gas-free listings.
-   */
-  function isApprovedForAll(
-    address _owner,
-    address _operator
-  ) public view override returns (bool isOperator) {
-    // Whitelist Regal proxy contract for easy trading.
-    ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddress);
-    if (address(proxyRegistry.proxies(_owner)) == _operator) {
-      return true;
-    }
-
-    return super.isApprovedForAll(_owner, _operator);
-  }
-
- /**
-    * @dev Change the creator address for given token
-    * @param _to   Address of the new creator
-    * @param _id  Token IDs to change creator of
-    */
-  function _setCreator(address _to, uint256 _id) internal creatorOnly(_id)
-  {
-      creators[_id] = _to;
-  }
-
-function buy() payable public  {
-  
-    uint256 amountToBuy = msg.value;
-    uint256 dexBalance = token.balanceOf(address(this));
-      require(amountToBuy > 0, "You need to send some ether");
-    require(amountToBuy <= dexBalance, "Not enough tokens in the reserve");
-    token.transfer(msg.sender, amountToBuy);
-    emit Bought(amountToBuy, token.name());
-}
-
-function sell(uint256 amount)  payable public {
-require(amount > 0, "You need to sell at least some tokens");
-    uint256 allowance = token.allowance(msg.sender, tok);
-    require(allowance >= amount, "Check the token allowance");
-    token.transferFrom(msg.sender, tok, amount);
-    payable(msg.sender).transfer(amount);
-    emit Sold(amount, token.name());
-}
-
 
  function _beforeTokenTransfer(
         address operator,
@@ -278,20 +100,7 @@ require(amount > 0, "You need to sell at least some tokens");
             super.supportsInterface(interfaceId);
     }
 
-     /**
-    * @dev calculates the next token ID based on value of _currentTokenID
-    * @return uint256 for the next token ID
-    */
-  function _getNextTokenID() private view returns (uint256) {
-    return _currentTokenID.add(1);
-  }
-
-  /**
-    * @dev increments the value of _currentTokenID
-    */
-  function _incrementTokenTypeId() private  {
-    _currentTokenID++;
-  }
+  
 
 
 }
