@@ -2,16 +2,112 @@
 pragma solidity > 0.6.1 <= 0.8.6; 
 
 import "./Assets.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract ProxyRegistry {
+contract ProxyRegistry is Initializable, OwnableUpgradeable {
 
 
     struct Registry {
-        address payable[] users;
+        address tokenRegistry;
+        address userRegistry;
+    }
+
+  
+    Registry _proxyRegistry;
+    TokenRegistry private loadedTrInstance;
+    UserRegistry private loadedUrInstance;
+
+    function initialize(address trAddr, address urAddr) initializer public {
+
+
+        _proxyRegistry.tokenRegistry = trAddr;
+        _proxyRegistry.userRegistry = urAddr;
+        loadedTrInstance = TokenRegistry(trAddr);
+        loadedUrInstance = UserRegistry(urAddr);
 
     }
 
+    function loadUsers() external view onlyOwner returns(UserRegistry) {
+        return loadedUrInstance;
+    }
 
+   function loadTokens() external view onlyOwner returns(TokenRegistry) {
+        return loadedTrInstance;
+    }
+
+}
+
+
+contract UserRegistry {
+
+    mapping (address => userRegistryElem) userRegistry;
+
+    struct userRegistryElem {
+        address user;
+        string profileUri;
+        string name;
+        string avatarUri;
+        string metadataUri;
+        bool isOnline;
+        bool needValidation;
+        string signature;
+        uint dateCreated;
+    }
+
+    function registerUser(string memory name,
+    string memory avatarUri,
+    string memory metadataUri,
+    string memory profileUri) onlyNewUser public virtual  {
+
+        userRegistry[msg.sender].user = msg.sender;
+        userRegistry[msg.sender].profileUri = profileUri;
+        userRegistry[msg.sender].name = name;
+        userRegistry[msg.sender].avatarUri = avatarUri;
+        userRegistry[msg.sender].metadataUri = metadataUri;
+        userRegistry[msg.sender].isOnline = false;
+        userRegistry[msg.sender].dateCreated = block.timestamp;
+        userRegistry[msg.sender].needValidation = true;
+        userRegistry[msg.sender].signature = "";
+
+    }
+
+    function loadCurrentUser() public virtual returns(userRegistryElem memory user) {
+
+        require(!!exists());
+        userRegistry[msg.sender].isOnline = true;
+        return userRegistry[msg.sender];
+
+    }
+
+    function loadOtherUser(address userId) public virtual  returns(userRegistryElem memory user) {
+        require(!!exists());
+        userRegistry[userId].isOnline = checkOnlineStatus(userId);
+        return userRegistry[userId];
+    }
+
+    function checkOnlineStatus(address userId) public virtual returns(bool) {
+        if(!userRegistry[userId].isOnline) {
+        return false;
+        }
+        return true;
+    }
+
+
+
+    function exists() public view returns(bool) {
+
+        if(userRegistry[msg.sender].user == msg.sender) {
+            return true;
+        }
+        return false;
+
+    }
+
+    modifier onlyNewUser() {
+        require(!exists());
+        _;
+    }
 
 }
 

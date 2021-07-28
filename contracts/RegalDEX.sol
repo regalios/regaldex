@@ -17,7 +17,7 @@ import "./lib/ProxyRegistry.sol";
 
 
 
-contract RegalDEX is UUPSUpgradeable, ERC1155Upgradeable,  OwnableUpgradeable, AccessControlEnumerableUpgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable {
+contract RegalDEX is Initializable, ERC1155Upgradeable,  OwnableUpgradeable, AccessControlEnumerableUpgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable {
 
 
 using Strings for string;
