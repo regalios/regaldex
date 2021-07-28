@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@0xsequence/erc-1155": "^3.0.4",
+    "@openzeppelin/contracts": "^4.2.0",
+    "@openzeppelin/contracts-upgradeable": "^4.2.0",
+    "@openzeppelin/truffle-upgrades": "^1.8.0",
+    "@truffle/hdwallet-provider": "^1.4.2",
+    "ethers": "^5.4.2"
+  },
+  "devDependencies": {
+    "truffle": "^5.4.2",
+    "ts-node": "^10.1.0",
+    "ts-node-dev": "^1.1.8",
+    "typescript": "^4.3.5"
+  }
+}
