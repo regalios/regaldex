@@ -2,10 +2,9 @@
 pragma solidity > 0.6.1 <= 0.8.6; 
 
 import "./Assets.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract ProxyRegistry is Initializable, OwnableUpgradeable {
+contract ProxyRegistry  {
 
 
     struct Registry {
@@ -18,21 +17,21 @@ contract ProxyRegistry is Initializable, OwnableUpgradeable {
     TokenRegistry private loadedTrInstance;
     UserRegistry private loadedUrInstance;
 
-    function initialize(address trAddr, address urAddr) initializer public {
+   constructor(address trAddr, address urAddr) {
 
-
-        _proxyRegistry.tokenRegistry = trAddr;
-        _proxyRegistry.userRegistry = urAddr;
         loadedTrInstance = TokenRegistry(trAddr);
         loadedUrInstance = UserRegistry(urAddr);
+        _proxyRegistry.tokenRegistry = loadedTrInstance._getRegistryAddress();
+        _proxyRegistry.userRegistry = loadedUrInstance._getRegistryAddress();
+
 
     }
 
-    function loadUsers() external view onlyOwner returns(UserRegistry) {
+    function loadUsers() external view returns(UserRegistry) {
         return loadedUrInstance;
     }
 
-   function loadTokens() external view onlyOwner returns(TokenRegistry) {
+   function loadTokens() external view returns(TokenRegistry) {
         return loadedTrInstance;
     }
 
@@ -53,6 +52,16 @@ contract UserRegistry {
         bool needValidation;
         string signature;
         uint dateCreated;
+    }
+
+    address contractAddress = address(0);
+
+    function _getRegistryAddress() external view returns(address) {
+        return contractAddress;
+    }
+
+    constructor() {
+       
     }
 
     function registerUser(string memory name,
@@ -134,6 +143,12 @@ contract TokenRegistry {
 
     }
 
+  address contractAddress = address(0);
+
+    function _getRegistryAddress() external view returns(address) {
+        return contractAddress;
+    }
+
     tokenRegistryElem[] elements;
 
     function add(
@@ -170,8 +185,9 @@ contract TokenRegistry {
         _;
     }
 
-    constructor() {
-
+     constructor() {
+       
+    
         owner = payable(msg.sender);
         
     }

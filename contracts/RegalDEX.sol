@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./tokens/RegalERC20.sol";
+
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/IERC1155MetadataURIUpgradeable.sol";
@@ -10,20 +10,19 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./lib/Strings.sol";
 import "./lib/ProxyRegistry.sol";
 
 
 
 
-contract RegalDEX is Initializable, ERC1155Upgradeable,  OwnableUpgradeable, AccessControlEnumerableUpgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable {
+contract RegalDEX is  ERC1155Upgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable, AccessControlEnumerableUpgradeable {
 
 
 using Strings for string;
 using SafeMathUpgradeable for uint256;
 
-ERC20Upgradeable public exchangeToken;
+//ERC20Upgradeable public exchangeToken;
 
 
 
@@ -31,7 +30,7 @@ address proxyRegistryAddress;
 address tokenFactoryAddress;
 address erc721TokensRegistry;
 
-ProxyRegistry public registry;
+
 
   /* Cancelled / finalized orders, by hash. */
     mapping(bytes32 => bool) public cancelledOrFinalized;
@@ -76,6 +75,7 @@ struct Order {
 
 
 }
+
 
  function _beforeTokenTransfer(
         address operator,

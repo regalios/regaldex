@@ -15,6 +15,8 @@ contract  NFTBox is OwnableUpgradeable {
 
     }
 
+
+
     enum Class {
         UNIQUE,
         RARE,
@@ -53,7 +55,7 @@ contract  NFTBox is OwnableUpgradeable {
     }
 
     function setOptionSettings(
-        Option _option,
+        uint256 _option,
         uint256 maxQuantity
     ) public onlyOwner {
 

@@ -12,14 +12,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "../lib/Strings.sol";
 
 
-contract OwnableDelegateProxy { }
-
-
-
-contract ProxyRegistry {
-  mapping(address => OwnableDelegateProxy) public proxies;
-}
-
 
 
 contract TokenFactory is ERC1155Upgradeable, OwnableUpgradeable, AccessControlEnumerableUpgradeable, ERC1155BurnableUpgradeable {
@@ -220,10 +212,10 @@ function create(
     address _operator
   ) public view override returns (bool isOperator) {
     // Whitelist Regal proxy contract for easy trading.
-    ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddress);
-    if (address(proxyRegistry.proxies(_owner)) == _operator) {
+    //ProxyRegistry proxyRegistry = ProxyRegistry(proxyRegistryAddress);
+    /*if (address(proxyRegistry.proxies(_owner)) == _operator) {
       return true;
-    }
+    }*/
 
     return super.isApprovedForAll(_owner, _operator);
   }
