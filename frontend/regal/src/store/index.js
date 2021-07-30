@@ -3,7 +3,7 @@ import Vuex from 'vuex'
 //import web3 from '../plugins/web3';
 
 //import ABI from "../../../../build/contracts/RegalERC20.json";
-import  Web3 from "web3";
+//import  Web3 from "web3";
 
 
 
@@ -20,33 +20,9 @@ Vue.use(Vuex)
   }
 })*/
 
-const provider = new Web3.providers.HttpProvider("https://ropsten.infura.io/v3/654adc0bbc0f4667a3a725b55d5e84ac");
+//const provider = new Web3.providers.HttpProvider("https://ropsten.infura.io/v3/654adc0bbc0f4667a3a725b55d5e84ac");
 
-const getWeb3 = function()  {
-    const web3 = new Web3(provider);
-    
-    if(!web3) {
-      return undefined;
-    }
 
-   return new Promise((resolve, reject) => {
-
-    web3.eth.net.isListening().then(conn => {
-      web3.eth.net.getId().then(id => {
-        web3.eth.getAccounts().then(acc => {
-          resolve({
-            networkId: id,
-            web3Instance: conn,
-            accounts: acc
-          })
-        });
-      });
-    }).catch(err => reject(err));
-
-   }); 
- 
- 
-};
 
 //Vue.use(VueWeb3, { web3: new Web3(Web3.givenProvider)});
 
@@ -57,37 +33,71 @@ const getWeb3 = function()  {
 
 export default new Vuex.Store({
   state: {
-    web3: {
-      impl: async () => { let a = await getWeb3(); if(a) {return a;}}
-    },
-    web3Copy: {}
+   
+    myEthAddress: "",
+    metamaskConnected: false,
+    web3: null,
+    profile_info: {},
+    contracts: {
+      regal:null,
+      tokens:null,
+      users:null
+    }
+
 
   },
   mutations: {
-    registerWeb3Instance(state, payload) {
-        console.log('registerWeb3instance Mutation being executed')
- let result = payload
- let web3Copy = state.web3Copy;
- web3Copy.coinbase = "";
- web3Copy.networkId = result.networkId;
- web3Copy.balance = 0;
- web3Copy.isInjected = result.web3Instance.injectedWeb3
- web3Copy.web3Instance = result.web3Instance;
- state.web3Copy = web3Copy
+    
+    setWeb3(state, payload) {
+      state.web3 = payload;
+    },
+    setEthAddress(state, payload) {
+      state.myEthAddress = payload;
+    },
+    setMetamaskConnected(state, payload) {
+      state.metamaskConnected = payload;
+    },
+    setContracts(state, payload) {
+      state.contracts = payload;
+    },
+    setProfileInfo(state, payload) {
+      state.profile_info = payload;
     }
+
     },
   actions: {
-    registerWeb3({commit})  {
-      console.log('registerWeb3 Action being executed')
-      this.state.web3.impl().then(result => {
-        console.log('committing result to registerWeb3Instance mutation')
-        
-        commit('registerWeb3Instance', result)
-      }).catch(e => {
-        console.log('error in action registerWeb3', e)
-      })
+    
+    initialize: ({commit}, payload) => {
+      commit('setWeb3', payload);
+      if(typeof payload !== 'undefined') {
+        commit('setMetamaskConnected', true);
+      }
+    },
+    registerData: ({commit}, payload) => {
+      commit('setEthAddress', payload.metaMaskAddress);
+    },
+    registerContracts: ({commit}, payload) => {
+      commit('setContracts', payload);
+    }
+   
+  },
+  getters: {
+    getWeb3(state) {
+      return state.web3;
+    },
+    getMyAddress(state) {
+      return state.myEthAddress;
+    },
+    getUserContract(state) {
+      return state.contracts.users;
+    },
+    getTokenContract(state) {
+      return state.contracts.tokens;
+    },
+    getRegalERC20Contract(state) {
+      return state.contracts.regal;
+    }
 
-  }
   },
   modules: {
   }

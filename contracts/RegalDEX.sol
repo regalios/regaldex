@@ -12,11 +12,13 @@ import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "./lib/Strings.sol";
 import "./lib/ProxyRegistry.sol";
+//import "./tokens/RegalERC20.sol";
 
 
 
 
-contract RegalDEX is  ERC1155Upgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable, AccessControlEnumerableUpgradeable {
+
+contract RegalDEX is Initializable,  ERC1155Upgradeable, ERC1155BurnableUpgradeable, ERC1155PausableUpgradeable, AccessControlEnumerableUpgradeable {
 
 
 using Strings for string;
@@ -29,6 +31,52 @@ using SafeMathUpgradeable for uint256;
 address proxyRegistryAddress;
 address tokenFactoryAddress;
 address erc721TokensRegistry;
+address userRegistryAddress;
+address tokenRegistryAddress;
+
+address storeContractAddress;
+address regalV1Router;
+
+function initialize(
+  address _proxyRegistry,
+  address _tokenFactory,
+  address _erc721TokensRegistry,
+  address _userRegistry,
+  address _tokenRegistry
+  //address _mainERC20Token
+) public virtual initializer {
+
+  proxyRegistryAddress = _proxyRegistry;
+  tokenFactoryAddress = _tokenFactory;
+  erc721TokensRegistry = _erc721TokensRegistry;
+  userRegistryAddress = _userRegistry;
+  tokenRegistryAddress = _tokenRegistry;
+  //mainERC20Token = RegalERC20(_mainERC20Token);
+
+}
+
+function setStoreContractAddress(address sca) public payable returns(bool) {
+  storeContractAddress = sca;
+  return true;
+}
+
+
+
+function getUserRegistry() public virtual view returns(UserRegistry) {
+  return UserRegistry(userRegistryAddress);
+}
+
+function getTokenRegistry() public virtual view returns(TokenRegistry) {
+  return TokenRegistry(tokenRegistryAddress);
+}
+
+function getProxyRegistry() public virtual view returns(ProxyRegistry) {
+  return ProxyRegistry(proxyRegistryAddress);
+}
+
+function getStoreContract() internal {}
+
+
 
 
 

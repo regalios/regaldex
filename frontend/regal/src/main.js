@@ -4,6 +4,7 @@ import vuetify from './plugins/vuetify'
 import store from './store'
 import router from './router'
 import web3 from './plugins/web3'
+import 'vuetify/dist/vuetify.min.css'
 
 Vue.config.productionTip = false
 

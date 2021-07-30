@@ -22,6 +22,17 @@ module.exports = {
       skipDryRun: true,
       timeoutBlocks: 500000,
       networkCheckTimeout: 500000
+    },
+
+    ganache: {
+      host: "127.0.0.1",
+      port: 7545,
+      gas: 5000000,
+      gasPrice: 20000000000,
+      network_id: 5777,
+      skipDryRun: true,
+      timeoutBlocks: 500000,
+      networkCheckTimeout: 500000
     }
 
   },
